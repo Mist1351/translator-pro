@@ -1,29 +1,43 @@
 import os
 import sys
-import tempfile  # Нужен для создания временного файла
+import tempfile
 
-import requests  # Нужен для скачивания с прогрессом
+import requests
 from PyQt6 import uic
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QProgressBar
 
-# Импорт библиотек перевода
+# === НАСТРОЙКА ПОРТАТИВНОСТИ (Важно: делать ДО импорта argostranslate) ===
+# Получаем путь к папке, где лежит скрипт
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Папка для языков рядом со скриптом
+DATA_DIR = os.path.join(BASE_DIR, "translation_data")
+
+# Создаем папку, если нет
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
+
+# Говорим библиотеке искать/сохранять языки здесь
+os.environ["ARGOS_PACKAGES_DIR"] = DATA_DIR
+print(f"Путь к базе данных перевода: {DATA_DIR}")
+# ==========================================================================
+
+# Импорт библиотек
 try:
     import argostranslate.package
     import argostranslate.translate
     from deep_translator import GoogleTranslator
 except ImportError:
-    print("Ошибка: Установите библиотеки!")
+    print("Ошибка: pip install deep-translator argostranslate requests PyQt6")
     sys.exit(1)
 
 
-# --- Поток с поддержкой прогресса скачивания ---
 class TranslationWorker(QThread):
     finished = pyqtSignal(str)
     error = pyqtSignal(str)
     status = pyqtSignal(str)
-    progress_val = pyqtSignal(int)  # Сигнал для прогресс-бара (0-100)
-    progress_visible = pyqtSignal(bool)  # Показать/Скрыть бар
+    progress_val = pyqtSignal(int)
+    progress_visible = pyqtSignal(bool)
 
     def __init__(self, text, src_lang, target_lang, mode):
         super().__init__()
@@ -33,7 +47,7 @@ class TranslationWorker(QThread):
         self.mode = mode
 
     def run(self):
-        self.progress_visible.emit(False)  # Скрываем бар в начале
+        self.progress_visible.emit(False)
         if not self.text.strip():
             self.finished.emit("")
             return
@@ -41,18 +55,21 @@ class TranslationWorker(QThread):
         try:
             result = ""
             if self.mode == "Online":
-                self.status.emit("Выполняется онлайн перевод...")
+                self.status.emit("Онлайн перевод...")
                 src = "auto" if self.src == "auto" else self.src
                 translator = GoogleTranslator(source=src, target=self.target)
                 result = translator.translate(self.text)
 
-            else:  # Offline Mode
+            else:  # Offline
                 if self.src == "auto":
                     self.error.emit("Офлайн режим: выберите язык источника.")
                     return
 
-                # Проверка наличия пакета
-                self.status.emit("Проверка пакетов...")
+                # Проверяем, установлен ли пакет в НАШУ папку (argostranslate сам проверит DATA_DIR)
+                self.status.emit("Проверка наличия языков...")
+
+                # Обновляем индекс пакетов только если он пустой или старый (опционально)
+                # Но для надежности проверяем установленные
                 installed_packages = argostranslate.package.get_installed_packages()
                 is_installed = any(
                     pkg.from_code == self.src and pkg.to_code == self.target
@@ -60,7 +77,8 @@ class TranslationWorker(QThread):
                 )
 
                 if not is_installed:
-                    self.status.emit(f"Поиск пакета {self.src}->{self.target}...")
+                    self.status.emit("Пакет не найден локально. Поиск в сети...")
+                    # Обновляем список доступных пакетов (скачивает index.json в DATA_DIR)
                     argostranslate.package.update_package_index()
                     available_packages = argostranslate.package.get_available_packages()
 
@@ -74,50 +92,47 @@ class TranslationWorker(QThread):
                     )
 
                     if pkg_to_install:
-                        # --- РУЧНОЕ СКАЧИВАНИЕ С ПРОГРЕССОМ ---
+                        # Скачивание
                         download_url = pkg_to_install.links[0]
-                        self.status.emit("Скачивание модели...")
-                        self.progress_visible.emit(True)  # Показываем бар
+                        self.status.emit(
+                            f"Скачивание {self.src}->{self.target} в локальную папку..."
+                        )
+                        self.progress_visible.emit(True)
 
-                        # Создаем временный файл
                         temp_dir = tempfile.gettempdir()
                         filename = os.path.join(
-                            temp_dir, f"argos_{self.src}_{self.target}.argosmodel"
+                            temp_dir, f"pkg_{self.src}_{self.target}.argosmodel"
                         )
 
-                        response = requests.get(download_url, stream=True)
-                        total_length = response.headers.get("content-length")
-
-                        if total_length is None:  # Если сервер не отдал размер
-                            with open(filename, "wb") as f:
-                                f.write(response.content)
-                        else:
-                            dl = 0
-                            total_length = int(total_length)
-                            with open(filename, "wb") as f:
-                                for data in response.iter_content(chunk_size=4096):
-                                    dl += len(data)
-                                    f.write(data)
-                                    # Вычисляем процент
-                                    percent = int((dl / total_length) * 100)
-                                    self.progress_val.emit(percent)
-
-                        self.status.emit("Установка модели...")
-                        self.progress_visible.emit(
-                            False
-                        )  # Скрываем бар, идет установка
-                        argostranslate.package.install_from_path(filename)
-
-                        # Удаляем временный файл
                         try:
-                            os.remove(filename)
-                        except:
-                            pass
+                            response = requests.get(download_url, stream=True)
+                            total_length = response.headers.get("content-length")
+
+                            if total_length is None:
+                                with open(filename, "wb") as f:
+                                    f.write(response.content)
+                            else:
+                                dl = 0
+                                total_length = int(total_length)
+                                with open(filename, "wb") as f:
+                                    for data in response.iter_content(chunk_size=4096):
+                                        dl += len(data)
+                                        f.write(data)
+                                        percent = int((dl / total_length) * 100)
+                                        self.progress_val.emit(percent)
+
+                            self.status.emit("Распаковка и установка...")
+                            self.progress_visible.emit(False)
+                            # Установит пакет именно в DATA_DIR
+                            argostranslate.package.install_from_path(filename)
+                        finally:
+                            if os.path.exists(filename):
+                                os.remove(filename)
                     else:
-                        self.error.emit("Пакет языка не найден.")
+                        self.error.emit("Не удалось найти пакет для этой пары языков.")
                         return
 
-                self.status.emit("Перевод...")
+                self.status.emit("Перевод нейросетью...")
                 result = argostranslate.translate.translate(
                     self.text, self.src, self.target
                 )
@@ -138,7 +153,7 @@ class TranslatorApp(QMainWindow):
         if os.path.exists("interface.ui"):
             uic.loadUi("interface.ui", self)
         else:
-            sys.exit("Файл interface.ui не найден!")
+            sys.exit("Interface file not found!")
 
         self.languages = {
             "Автоопределение": "auto",
@@ -149,51 +164,52 @@ class TranslatorApp(QMainWindow):
             "Французский": "fr",
             "Испанский": "es",
         }
+
+        # Переменные для хранения предыдущего состояния (для свапа)
+        self.last_src_idx = 0
+        self.last_tgt_idx = 1  # Предполагаем, что по умолчанию выбран 2-й элемент
+
         self.init_ui()
         self.setup_connections()
 
     def init_ui(self):
-        # ... (Код заполнения comboSource/Target тот же, что был) ...
+        # Заполнение списков
         for name, code in self.languages.items():
             self.comboSource.addItem(name, code)
             if code != "auto":
                 self.comboTarget.addItem(name, code)
-        self.comboSource.setCurrentIndex(0)
-        self.comboTarget.setCurrentIndex(1)
 
-        # === ДОБАВЛЯЕМ PROGRESS BAR В STATUS BAR ===
+        # Дефолтные значения
+        self.comboSource.setCurrentIndex(0)  # Auto
+        self.comboTarget.setCurrentIndex(1)  # Ru (индекс 1, т.к. в Target нет "Auto")
+
+        # Запоминаем начальные индексы
+        self.last_src_idx = self.comboSource.currentIndex()
+        self.last_tgt_idx = self.comboTarget.currentIndex()
+
+        # ProgressBar
         self.progressBar = QProgressBar()
-        self.progressBar.setMaximumWidth(200)  # Ширина бара
+        self.progressBar.setMaximumWidth(200)
         self.progressBar.setValue(0)
-        self.progressBar.setVisible(False)  # Скрыт по умолчанию
-        # Стиль бара (зеленый)
+        self.progressBar.setVisible(False)
         self.progressBar.setStyleSheet("""
-            QProgressBar {
-                border: 1px solid #555;
-                border-radius: 5px;
-                text-align: center;
-                color: white;
-            }
-            QProgressBar::chunk {
-                background-color: #2ecc71; 
-                width: 10px;
-            }
+            QProgressBar { border: 1px solid #555; border-radius: 5px; text-align: center; color: white; }
+            QProgressBar::chunk { background-color: #2ecc71; }
         """)
-        # Добавляем виджет справа в статус бар
         self.statusbar.addPermanentWidget(self.progressBar)
 
-        # Ваши стили (добавьте сюда исправленные стили из прошлого ответа)
+        # Стили (включая исправление цвета)
         self.setStyleSheet("""
             QMainWindow { background-color: #2b2b2b; }
             QLabel { color: #ffffff; font-size: 14px; font-weight: bold; }
             QTextEdit { 
-                background-color: #353535; color: #ffffff; border: 1px solid #555; 
-                border-radius: 8px; padding: 10px; font-size: 14px;
+                background-color: #353535; color: #ffffff; 
+                border: 1px solid #555; border-radius: 8px; padding: 10px; font-size: 14px;
             }
             QTextEdit:focus { border: 1px solid #3a86ff; }
             QComboBox { 
-                background-color: #404040; color: white; border: 1px solid #555;
-                border-radius: 5px; padding: 5px; min-width: 150px;
+                background-color: #404040; color: white; 
+                border: 1px solid #555; border-radius: 5px; padding: 5px; min-width: 150px;
             }
             QComboBox QAbstractItemView {
                 background-color: #404040; color: white; selection-background-color: #3a86ff;
@@ -209,12 +225,57 @@ class TranslatorApp(QMainWindow):
 
     def setup_connections(self):
         self.btnTranslate.clicked.connect(self.start_translation)
-        self.comboSource.currentIndexChanged.connect(self.check_language_conflict)
-        self.comboTarget.currentIndexChanged.connect(self.check_language_conflict)
+        # Подключаем отдельные обработчики для каждого комбобокса
+        self.comboSource.currentIndexChanged.connect(self.on_source_changed)
+        self.comboTarget.currentIndexChanged.connect(self.on_target_changed)
 
-    def check_language_conflict(self):
-        # ... (Старый код) ...
-        pass
+    # === ЛОГИКА ОБМЕНА ЯЗЫКАМИ (SWAP) ===
+    def on_source_changed(self, index):
+        src_code = self.comboSource.currentData()
+        tgt_code = self.comboTarget.currentData()
+
+        # Если выбрали тот же язык, что и в правом окне
+        if src_code != "auto" and src_code == tgt_code:
+            # Блокируем сигналы, чтобы не вызвать зацикливание
+            self.comboTarget.blockSignals(True)
+            # Ставим в правое окно то, что БЫЛО в левом
+            # Но нужно учесть, что в comboTarget нет пункта "auto"
+            # Поэтому мы берем код предыдущего Source и ищем его индекс в Target
+
+            prev_src_code = self.comboSource.itemData(self.last_src_idx)
+
+            # Найти индекс этого кода в comboTarget
+            new_tgt_index = self.comboTarget.findData(prev_src_code)
+
+            if new_tgt_index != -1:
+                self.comboTarget.setCurrentIndex(new_tgt_index)
+                # Обновляем память индекса правой колонки
+                self.last_tgt_idx = new_tgt_index
+
+            self.comboTarget.blockSignals(False)
+
+        # Обновляем память
+        self.last_src_idx = index
+
+    def on_target_changed(self, index):
+        src_code = self.comboSource.currentData()
+        tgt_code = self.comboTarget.currentData()
+
+        if src_code != "auto" and src_code == tgt_code:
+            self.comboSource.blockSignals(True)
+
+            prev_tgt_code = self.comboTarget.itemData(self.last_tgt_idx)
+            new_src_index = self.comboSource.findData(prev_tgt_code)
+
+            if new_src_index != -1:
+                self.comboSource.setCurrentIndex(new_src_index)
+                self.last_src_idx = new_src_index
+
+            self.comboSource.blockSignals(False)
+
+        self.last_tgt_idx = index
+
+    # ====================================
 
     def start_translation(self):
         text = self.TextInput.toPlainText()
@@ -223,7 +284,7 @@ class TranslatorApp(QMainWindow):
         mode = "Online" if "Online" in self.comboMode.currentText() else "Offline"
 
         if not text:
-            self.statusbar.showMessage("Нет текста")
+            self.statusbar.showMessage("Введите текст")
             return
 
         self.btnTranslate.setEnabled(False)
@@ -233,11 +294,8 @@ class TranslatorApp(QMainWindow):
         self.worker.finished.connect(self.on_finished)
         self.worker.error.connect(self.on_error)
         self.worker.status.connect(self.statusbar.showMessage)
-
-        # Подключаем сигналы прогресса
         self.worker.progress_val.connect(self.progressBar.setValue)
         self.worker.progress_visible.connect(self.progressBar.setVisible)
-
         self.worker.start()
 
     def on_finished(self, result):
