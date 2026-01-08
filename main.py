@@ -130,6 +130,7 @@ class TranslationWorker(QThread):
                                 os.remove(filename)
                     else:
                         self.error.emit("Не удалось найти пакет для этой пары языков.")
+                        self.status.emit("Не удалось найти пакет для этой пары языков.")
                         return
 
                 self.status.emit("Перевод нейросетью...")
