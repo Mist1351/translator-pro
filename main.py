@@ -235,7 +235,7 @@ class TranslatorApp(QMainWindow):
         src_code = self.comboSource.currentData()
         tgt_code = self.comboTarget.currentData()
 
-        # Если выбрали тот же язык, что и в правом окне
+        # Если выбран не Auto и языки совпали
         if src_code != "auto" and src_code == tgt_code:
             # Блокируем сигналы, чтобы не вызвать зацикливание
             self.comboTarget.blockSignals(True)
@@ -243,19 +243,42 @@ class TranslatorApp(QMainWindow):
             # Но нужно учесть, что в comboTarget нет пункта "auto"
             # Поэтому мы берем код предыдущего Source и ищем его индекс в Target
 
+            # Получаем код языка, который был выбран ДО этого
             prev_src_code = self.comboSource.itemData(self.last_src_idx)
 
-            # Найти индекс этого кода в comboTarget
+            # Ищем этот предыдущий язык в правом списке
             new_tgt_index = self.comboTarget.findData(prev_src_code)
 
             if new_tgt_index != -1:
+                # Сценарий 1: Обычный обмен (было En->Ru, выбрали Ru, стало Ru->En)
                 self.comboTarget.setCurrentIndex(new_tgt_index)
-                # Обновляем память индекса правой колонки
-                self.last_tgt_idx = new_tgt_index
+            else:
+                # Сценарий 2: Раньше было "Auto". Его нет в правом списке.
+                # Чтобы не осталось Ru -> Ru, нужно выбрать что-то другое.
+
+                # Если выбрали Английский, ставим Русский
+                if src_code == "en":
+                    fallback_index = self.comboTarget.findData("ru")
+                else:
+                    # В любом другом случае ставим Английский
+                    fallback_index = self.comboTarget.findData("en")
+
+                # Если вдруг "en" нет (маловероятно, но для надежности)
+                if fallback_index == -1:
+                    # Просто берем первый доступный язык, который не равен текущему
+                    for i in range(self.comboTarget.count()):
+                        if self.comboTarget.itemData(i) != src_code:
+                            fallback_index = i
+                            break
+
+                self.comboTarget.setCurrentIndex(fallback_index)
+
+            # Обновляем "память" для правого списка, так как мы его насильно изменили
+            self.last_tgt_idx = self.comboTarget.currentIndex()
 
             self.comboTarget.blockSignals(False)
 
-        # Обновляем память
+        # Запоминаем текущий выбор как "прошлый" для следующего раза
         self.last_src_idx = index
 
     def on_target_changed(self, index):
