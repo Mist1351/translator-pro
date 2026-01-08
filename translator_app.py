@@ -1,0 +1,211 @@
+import os
+import sys
+
+from PyQt6 import uic
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QMainWindow,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QStatusBar,
+    QTextEdit,
+)
+
+from translator_worker import TranslationWorker
+
+
+class TranslatorApp(QMainWindow):
+    TextInput: QTextEdit
+    TextOutput: QTextEdit
+    comboSource: QComboBox
+    comboTarget: QComboBox
+    comboMode: QComboBox
+    btnTranslate: QPushButton
+    statusbar: QStatusBar
+
+    def __init__(self):
+        super().__init__()
+        if os.path.exists("interface.ui"):
+            uic.load_ui.loadUi("interface.ui", self)
+        else:
+            sys.exit("Interface file not found!")
+
+        self.languages: dict[str, str] = {
+            "Автоопределение": "auto",
+            "Английский": "en",
+            "Русский": "ru",
+            "Китайский": "zh",
+            "Немецкий": "de",
+            "Французский": "fr",
+            "Испанский": "es",
+        }
+
+        # Переменные для хранения предыдущего состояния (для свапа)
+        self.last_src_idx: int = 0
+        self.last_tgt_idx: int = 1  # Предполагаем, что по умолчанию выбран 2-й элемент
+
+        self.init_ui()
+        self.setup_connections()
+
+    def init_ui(self):
+        # Заполнение списков
+        for name, code in self.languages.items():
+            self.comboSource.addItem(name, code)
+            if code != "auto":
+                self.comboTarget.addItem(name, code)
+
+        # Дефолтные значения
+        self.comboSource.setCurrentIndex(0)  # Auto
+        self.comboTarget.setCurrentIndex(1)  # Ru (индекс 1, т.к. в Target нет "Auto")
+
+        # Запоминаем начальные индексы
+        self.last_src_idx = self.comboSource.currentIndex()
+        self.last_tgt_idx = self.comboTarget.currentIndex()
+
+        # ProgressBar
+        self.progressBar = QProgressBar()
+        self.progressBar.setMaximumWidth(200)
+        self.progressBar.setValue(0)
+        self.progressBar.setVisible(False)
+        self.progressBar.setStyleSheet("""
+            QProgressBar { border: 1px solid #555; border-radius: 5px; text-align: center; color: white; }
+            QProgressBar::chunk { background-color: #2ecc71; }
+        """)
+        self.statusbar.addPermanentWidget(self.progressBar)
+
+        # Стили (включая исправление цвета)
+        self.setStyleSheet("""
+            QMainWindow { background-color: #2b2b2b; }
+            QLabel { color: #ffffff; font-size: 14px; font-weight: bold; }
+            QTextEdit { 
+                background-color: #353535; color: #ffffff; 
+                border: 1px solid #555; border-radius: 8px; padding: 10px; font-size: 14px;
+            }
+            QTextEdit:focus { border: 1px solid #3a86ff; }
+            QComboBox { 
+                background-color: #404040; color: white; 
+                border: 1px solid #555; border-radius: 5px; padding: 5px; min-width: 150px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #404040; color: white; selection-background-color: #3a86ff;
+            }
+            QPushButton {
+                background-color: #3a86ff; color: white; border-radius: 8px; font-size: 16px; font-weight: bold;
+            }
+            QStatusBar { color: #aaaaaa; }
+            QMessageBox { background-color: #2b2b2b; }
+            QMessageBox QLabel { color: white; }
+            QMessageBox QPushButton { background-color: #404040; color: white; padding: 5px 15px; }
+        """)
+
+    def setup_connections(self):
+        self.btnTranslate.clicked.connect(self.start_translation)
+        # Подключаем отдельные обработчики для каждого комбобокса
+        self.comboSource.currentIndexChanged.connect(self.on_source_changed)
+        self.comboTarget.currentIndexChanged.connect(self.on_target_changed)
+
+    # === ЛОГИКА ОБМЕНА ЯЗЫКАМИ (SWAP) ===
+    def on_source_changed(self, index):
+        src_code = self.comboSource.currentData()
+        tgt_code = self.comboTarget.currentData()
+
+        # Если выбран не Auto и языки совпали
+        if src_code != "auto" and src_code == tgt_code:
+            # Блокируем сигналы, чтобы не вызвать зацикливание
+            self.comboTarget.blockSignals(True)
+            # Ставим в правое окно то, что БЫЛО в левом
+            # Но нужно учесть, что в comboTarget нет пункта "auto"
+            # Поэтому мы берем код предыдущего Source и ищем его индекс в Target
+
+            # Получаем код языка, который был выбран ДО этого
+            prev_src_code = self.comboSource.itemData(self.last_src_idx)
+
+            # Ищем этот предыдущий язык в правом списке
+            new_tgt_index = self.comboTarget.findData(prev_src_code)
+
+            if new_tgt_index != -1:
+                # Сценарий 1: Обычный обмен (было En->Ru, выбрали Ru, стало Ru->En)
+                self.comboTarget.setCurrentIndex(new_tgt_index)
+            else:
+                # Сценарий 2: Раньше было "Auto". Его нет в правом списке.
+                # Чтобы не осталось Ru -> Ru, нужно выбрать что-то другое.
+
+                # Если выбрали Английский, ставим Русский
+                if src_code == "en":
+                    fallback_index = self.comboTarget.findData("ru")
+                else:
+                    # В любом другом случае ставим Английский
+                    fallback_index = self.comboTarget.findData("en")
+
+                # Если вдруг "en" нет (маловероятно, но для надежности)
+                if fallback_index == -1:
+                    # Просто берем первый доступный язык, который не равен текущему
+                    for i in range(self.comboTarget.count()):
+                        if self.comboTarget.itemData(i) != src_code:
+                            fallback_index = i
+                            break
+
+                self.comboTarget.setCurrentIndex(fallback_index)
+
+            # Обновляем "память" для правого списка, так как мы его насильно изменили
+            self.last_tgt_idx = self.comboTarget.currentIndex()
+
+            self.comboTarget.blockSignals(False)
+
+        # Запоминаем текущий выбор как "прошлый" для следующего раза
+        self.last_src_idx = index
+
+    def on_target_changed(self, index):
+        src_code = self.comboSource.currentData()
+        tgt_code = self.comboTarget.currentData()
+
+        if src_code != "auto" and src_code == tgt_code:
+            self.comboSource.blockSignals(True)
+
+            prev_tgt_code = self.comboTarget.itemData(self.last_tgt_idx)
+            new_src_index = self.comboSource.findData(prev_tgt_code)
+
+            if new_src_index != -1:
+                self.comboSource.setCurrentIndex(new_src_index)
+                self.last_src_idx = new_src_index
+
+            self.comboSource.blockSignals(False)
+
+        self.last_tgt_idx = index
+
+    # ====================================
+
+    def start_translation(self):
+        text = self.TextInput.toPlainText()
+        src_code = self.comboSource.currentData()
+        tgt_code = self.comboTarget.currentData()
+        mode = "Online" if "Online" in self.comboMode.currentText() else "Offline"
+
+        if not text:
+            self.statusbar.showMessage("Введите текст")
+            return
+
+        self.btnTranslate.setEnabled(False)
+        self.btnTranslate.setText("...")
+
+        self.worker = TranslationWorker(text, src_code, tgt_code, mode)
+        self.worker.finished.connect(self.on_finished)
+        self.worker.error.connect(self.on_error)
+        self.worker.status.connect(self.statusbar.showMessage)
+        self.worker.progress_val.connect(self.progressBar.setValue)
+        self.worker.progress_visible.connect(self.progressBar.setVisible)
+        self.worker.start()
+
+    def on_finished(self, result):
+        self.TextOutput.setPlainText(result)
+        self.reset_ui()
+
+    def on_error(self, err):
+        QMessageBox.warning(self, "Ошибка", str(err))
+        self.reset_ui()
+
+    def reset_ui(self):
+        self.btnTranslate.setEnabled(True)
+        self.btnTranslate.setText("ПЕРЕВЕСТИ")
+        self.progressBar.setVisible(False)
