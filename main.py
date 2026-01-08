@@ -127,8 +127,13 @@ class TranslatorApp(QMainWindow):
 
         # Стилизация (Dark Theme)
         self.setStyleSheet("""
+            /* Основное окно */
             QMainWindow { background-color: #2b2b2b; }
+            
+            /* Текст меток */
             QLabel { color: #ffffff; font-size: 14px; font-weight: bold; }
+            
+            /* Поля ввода текста */
             QTextEdit { 
                 background-color: #353535; 
                 color: #ffffff; 
@@ -138,13 +143,26 @@ class TranslatorApp(QMainWindow):
                 font-size: 14px;
             }
             QTextEdit:focus { border: 1px solid #3a86ff; }
+            
+            /* Выпадающие списки (Сам блок) */
             QComboBox { 
                 background-color: #404040; 
                 color: white; 
+                border: 1px solid #555;
                 border-radius: 5px; 
                 padding: 5px; 
                 min-width: 150px;
             }
+            /* Стилизация выпадающей части списка (Fix белого фона) */
+            QComboBox QAbstractItemView {
+                background-color: #404040;
+                color: white;
+                selection-background-color: #3a86ff;
+                selection-color: white;
+                border: 1px solid #555;
+            }
+            
+            /* Кнопка */
             QPushButton {
                 background-color: #3a86ff;
                 color: white;
@@ -154,7 +172,28 @@ class TranslatorApp(QMainWindow):
             }
             QPushButton:hover { background-color: #266dd3; }
             QPushButton:pressed { background-color: #1b4b91; }
+            QPushButton:disabled { background-color: #555555; color: #aaaaaa; }
+
+            /* Статус бар */
             QStatusBar { color: #aaaaaa; }
+            
+            /* Всплывающие сообщения (QMessageBox) */
+            QMessageBox {
+                background-color: #2b2b2b;
+            }
+            QMessageBox QLabel {
+                color: white;
+            }
+            QMessageBox QPushButton {
+                background-color: #404040;
+                color: white;
+                border: 1px solid #555;
+                padding: 5px 15px;
+                border-radius: 4px;
+            }
+            QMessageBox QPushButton:hover {
+                background-color: #505050;
+            }
         """)
 
     def setup_connections(self):
