@@ -17,9 +17,9 @@ except ImportError:
 
 # --- Поток для перевода (чтобы интерфейс не вис) ---
 class TranslationWorker(QThread):
-    finished = pyqtSignal(str)  # Сигнал успешного перевода
-    error = pyqtSignal(str)  # Сигнал ошибки
-    status = pyqtSignal(str)  # Сигнал для статус-бара
+    finished = pyqtSignal(str)
+    error = pyqtSignal(str)
+    status = pyqtSignal(str)
 
     def __init__(self, text, src_lang, target_lang, mode):
         super().__init__()
@@ -37,7 +37,6 @@ class TranslationWorker(QThread):
             result = ""
             if self.mode == "Online":
                 self.status.emit("Выполняется онлайн перевод...")
-                # 'auto' для автоопределения
                 src = "auto" if self.src == "auto" else self.src
                 translator = GoogleTranslator(source=src, target=self.target)
                 result = translator.translate(self.text)
@@ -47,35 +46,52 @@ class TranslationWorker(QThread):
 
                 if self.src == "auto":
                     self.error.emit(
-                        "Офлайн режим пока не поддерживает автоопределение (выберите язык)."
+                        "Офлайн режим требует выбора языка (автоопределение недоступно)."
                     )
                     return
 
-                # Проверка и установка пакетов (упрощенная логика)
-                # В реальном приложении лучше проверять наличие пакетов при старте
-                self.status.emit(f"Проверка пакетов {self.src} -> {self.target}...")
-
-                # Логика Argos Translate
-                argostranslate.package.update_package_index()
-                available_packages = argostranslate.package.get_available_packages()
-                package_to_install = next(
-                    filter(
-                        lambda x: x.from_code == self.src and x.to_code == self.target,
-                        available_packages,
-                    ),
-                    None,
+                # 1. Проверяем, установлен ли уже этот язык
+                installed_packages = argostranslate.package.get_installed_packages()
+                is_package_installed = any(
+                    pkg.from_code == self.src and pkg.to_code == self.target
+                    for pkg in installed_packages
                 )
 
-                if package_to_install:
-                    if not package_to_install.is_installed:
-                        self.status.emit(
-                            "Скачивание нейросетевой модели (это может занять время)..."
-                        )
-                        argostranslate.package.install_from_path(
-                            package_to_install.download()
-                        )
+                # 2. Если не установлен - скачиваем
+                if not is_package_installed:
+                    self.status.emit(
+                        f"Пакета {self.src}->{self.target} нет. Скачивание списка..."
+                    )
+                    argostranslate.package.update_package_index()
+                    available_packages = argostranslate.package.get_available_packages()
 
+                    package_to_install = next(
+                        filter(
+                            lambda x: x.from_code == self.src
+                            and x.to_code == self.target,
+                            available_packages,
+                        ),
+                        None,
+                    )
+
+                    if package_to_install:
+                        self.status.emit(
+                            f"Скачивание модели (~100Мб)... Пожалуйста, подождите."
+                        )
+                        download_path = package_to_install.download()
+                        argostranslate.package.install_from_path(download_path)
+                        self.status.emit("Установка завершена.")
+                    else:
+                        self.error.emit(
+                            f"Пакет {self.src}->{self.target} не найден в репозитории Argos."
+                        )
+                        return
+
+                # 3. Переводим
                 self.status.emit("Перевод нейросетью...")
+                # Принудительная перезагрузка установленных языков (иногда нужно для новых пакетов)
+                # installed_languages = argostranslate.translate.get_installed_languages()
+                # Но обычно функция translate сама находит путь
                 result = argostranslate.translate.translate(
                     self.text, self.src, self.target
                 )
@@ -84,8 +100,10 @@ class TranslationWorker(QThread):
             self.status.emit("Готово")
 
         except Exception as e:
+            # Для отладки можно распечатать ошибку в консоль
+            print(f"Error details: {e}")
             self.error.emit(str(e))
-            self.status.emit("Ошибка перевода")
+            self.status.emit("Ошибка")
 
 
 # --- Основное окно ---
