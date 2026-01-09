@@ -1,2 +1,5 @@
 translation_data
 __pycache__
+build
+dist
+TranslatorPro.spec
