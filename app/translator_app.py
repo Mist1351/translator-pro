@@ -1,16 +1,17 @@
 import os
 import sys
+from typing import cast
 
-# Импортируем модуль загрузки интерфейса напрямую, чтобы не было проблем с линтером
-from PyQt6 import uic
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QFile
+from PySide6.QtUiTools import QUiLoader
+from PySide6.QtWidgets import (
     QComboBox,
     QMainWindow,
     QMessageBox,
     QProgressBar,
     QPushButton,
-    QStatusBar,
     QTextEdit,
+    QWidget,
 )
 
 from translator import (
@@ -35,6 +36,17 @@ def get_resource_path(relative_path: str) -> str:
     return os.path.join(base_path, relative_path)
 
 
+# Аннотация типов для виджетов из interface.ui (нужно для подсказок в IDE)
+class InterfaceUI(QWidget):
+    textInput: QTextEdit
+    textOutput: QTextEdit
+    comboSource: QComboBox
+    comboTarget: QComboBox
+    comboMode: QComboBox
+    btnTranslate: QPushButton
+    progressBar: QProgressBar
+
+
 class TranslatorApp(QMainWindow):
     """
     Главный класс приложения-переводчика.
@@ -42,15 +54,7 @@ class TranslatorApp(QMainWindow):
     Отвечает за отображение интерфейса, обработку нажатий и запуск потоков перевода.
     """
 
-    # Аннотация типов для виджетов из interface.ui (нужно для подсказок в IDE)
-    TextInput: QTextEdit
-    TextOutput: QTextEdit
-    comboSource: QComboBox
-    comboTarget: QComboBox
-    comboMode: QComboBox
-    btnTranslate: QPushButton
-    statusbar: QStatusBar
-    progressBar: QProgressBar
+    ui: InterfaceUI
 
     def __init__(self):
         """
@@ -69,7 +73,7 @@ class TranslatorApp(QMainWindow):
         self.setup_connections()
 
     def get_current_translator(self) -> Translator:
-        index: int = self.comboMode.currentData()
+        index: int = self.ui.comboMode.currentData()
         return self.translators[index]
 
     def _load_interface(self) -> None:
@@ -81,7 +85,22 @@ class TranslatorApp(QMainWindow):
 
         # Проверяем наличие файла разметки и загружаем в случае успеха
         if os.path.exists(ui_path):
-            uic.load_ui.loadUi(ui_path, self)
+            # 1. Загружаем файл
+            loader: QUiLoader = QUiLoader()
+            ui_file: QFile = QFile(ui_path)
+            ui_file.open(QFile.OpenModeFlag.ReadOnly)
+
+            # 2. Получаем виджет из файла
+            self.ui = cast(InterfaceUI, loader.load(ui_file, self))
+            ui_file.close()
+
+            # 3. Применяем его к главному окну (self)
+            styles = self.ui.styleSheet()
+            self.setStyleSheet(styles)
+            self.ui.setStyleSheet("")
+
+            # 5. Делаем загруженный виджет центральным (если это Main Window)
+            self.setCentralWidget(self.ui)
         else:
             raise FileExistsError(f"Interface file not found at: {ui_path}")
 
@@ -91,24 +110,24 @@ class TranslatorApp(QMainWindow):
         """
         translator: Translator = self.get_current_translator()
 
-        self.comboSource.blockSignals(True)
-        self.comboTarget.blockSignals(True)
+        self.ui.comboSource.blockSignals(True)
+        self.ui.comboTarget.blockSignals(True)
 
         # Заполнение списков языками из словаря
-        self.comboSource.clear()
-        self.comboTarget.clear()
+        self.ui.comboSource.clear()
+        self.ui.comboTarget.clear()
         for name, code in translator.languages.items():
-            self.comboSource.addItem(name, code)
+            self.ui.comboSource.addItem(name, code)
             # В целевой язык (Target) нельзя добавить "Автоопределение"
             if code != "auto":
-                self.comboTarget.addItem(name, code)
+                self.ui.comboTarget.addItem(name, code)
 
         # Выбор начальных языков
-        self.comboSource.setCurrentIndex(translator.source_index)
-        self.comboTarget.setCurrentIndex(translator.target_index)
+        self.ui.comboSource.setCurrentIndex(translator.source_index)
+        self.ui.comboTarget.setCurrentIndex(translator.target_index)
 
-        self.comboTarget.blockSignals(False)
-        self.comboSource.blockSignals(False)
+        self.ui.comboTarget.blockSignals(False)
+        self.ui.comboSource.blockSignals(False)
 
     def init_ui(self) -> None:
         """
@@ -119,21 +138,22 @@ class TranslatorApp(QMainWindow):
 
         # Заполнение списка режимов
         for index, translator in enumerate(self.translators):
-            self.comboMode.addItem(translator.name, index)
-        self.comboMode.setCurrentIndex(0)
+            self.ui.comboMode.addItem(translator.name, index)
+        self.ui.comboMode.setCurrentIndex(0)
 
         self._fillup_combo_boxes()
-        self.statusbar.addPermanentWidget(self.progressBar)
+        self.ui.progressBar.hide()
+        self.statusBar().addPermanentWidget(self.ui.progressBar)
 
     def setup_connections(self) -> None:
         """
         Подключение сигналов к слотам (обработчикам событий).
         """
-        self.btnTranslate.clicked.connect(self.start_translation)
+        self.ui.btnTranslate.clicked.connect(self.start_translation)
         # Подключаем сигналы изменения индекса в комбобоксах
-        self.comboSource.currentIndexChanged.connect(self.on_source_changed)
-        self.comboTarget.currentIndexChanged.connect(self.on_target_changed)
-        self.comboMode.currentIndexChanged.connect(self.on_mode_changed)
+        self.ui.comboSource.currentIndexChanged.connect(self.on_source_changed)
+        self.ui.comboTarget.currentIndexChanged.connect(self.on_target_changed)
+        self.ui.comboMode.currentIndexChanged.connect(self.on_mode_changed)
 
     def _resolve_lang_conflict(
         self,
@@ -153,7 +173,7 @@ class TranslatorApp(QMainWindow):
 
         last_from_idx: int = (
             translator.source_index
-            if from_combo_box == self.comboSource
+            if from_combo_box == self.ui.comboSource
             else translator.target_index
         )
 
@@ -177,7 +197,7 @@ class TranslatorApp(QMainWindow):
         to_combo_box.setCurrentIndex(new_to_index)
 
         # Обновляем сохраненный индекс правого списка
-        if to_combo_box == self.comboSource:
+        if to_combo_box == self.ui.comboSource:
             translator.source_index = new_to_index
         else:
             translator.target_index = new_to_index
@@ -189,7 +209,7 @@ class TranslatorApp(QMainWindow):
         """
         Слот, вызываемый при изменении языка источника (левый список).
         """
-        self._resolve_lang_conflict(self.comboSource, self.comboTarget)
+        self._resolve_lang_conflict(self.ui.comboSource, self.ui.comboTarget)
         # Запоминаем текущий выбор
         self.get_current_translator().source_index = index
 
@@ -197,7 +217,7 @@ class TranslatorApp(QMainWindow):
         """
         Слот, вызываемый при изменении целевого языка (правый список).
         """
-        self._resolve_lang_conflict(self.comboTarget, self.comboSource)
+        self._resolve_lang_conflict(self.ui.comboTarget, self.ui.comboSource)
         # Запоминаем текущий выбор
         self.get_current_translator().target_index = index
 
@@ -206,26 +226,26 @@ class TranslatorApp(QMainWindow):
         Слот, вызываемый при изменении режима перевода.
         """
         self._fillup_combo_boxes()
-        self._resolve_lang_conflict(self.comboSource, self.comboTarget)
+        self._resolve_lang_conflict(self.ui.comboSource, self.ui.comboTarget)
 
     def start_translation(self) -> None:
         """
         Метод запуска процесса перевода.
         Считывает данные, блокирует интерфейс и запускает рабочий поток.
         """
-        text = self.TextInput.toPlainText()
-        src_code: str = self.comboSource.currentData()
-        tgt_code: str = self.comboTarget.currentData()
+        text = self.ui.textInput.toPlainText()
+        src_code: str = self.ui.comboSource.currentData()
+        tgt_code: str = self.ui.comboTarget.currentData()
         translator: Translator = self.get_current_translator()
 
         # text пустой, нечего переводить
         if not text:
-            self.statusbar.showMessage("Введите текст")
+            self.statusBar().showMessage("Введите текст")
             return
 
         # Визуальная индикация работы
-        self.btnTranslate.setEnabled(False)
-        self.btnTranslate.setText("...")
+        self.ui.btnTranslate.setEnabled(False)
+        self.ui.btnTranslate.setText("...")
 
         # Создаем экземпляр потока (Worker)
         self.worker: TranslatorWorker = translator.run_translator_worker(
@@ -237,9 +257,9 @@ class TranslatorApp(QMainWindow):
         # Подписываемся на сигналы от потока
         self.worker.finished.connect(self.on_finished)
         self.worker.error.connect(self.on_error)
-        self.worker.status.connect(self.statusbar.showMessage)
-        self.worker.progress_val.connect(self.progressBar.setValue)
-        self.worker.progress_visible.connect(self.progressBar.setVisible)
+        self.worker.status.connect(self.statusBar().showMessage)
+        self.worker.progress_val.connect(self.ui.progressBar.setValue)
+        self.worker.progress_visible.connect(self.ui.progressBar.setVisible)
 
         # Запускаем поток
         self.worker.start()
@@ -248,7 +268,7 @@ class TranslatorApp(QMainWindow):
         """
         Вызывается, когда перевод успешно завершен.
         """
-        self.TextOutput.setPlainText(result)
+        self.ui.textOutput.setPlainText(result)
         self.reset_ui()
 
     def on_error(self, err):
@@ -263,6 +283,6 @@ class TranslatorApp(QMainWindow):
         """
         Возвращает элементы интерфейса в исходное состояние.
         """
-        self.btnTranslate.setEnabled(True)
-        self.btnTranslate.setText("ПЕРЕВЕСТИ")
-        self.progressBar.setVisible(False)
+        self.ui.btnTranslate.setEnabled(True)
+        self.ui.btnTranslate.setText("ПЕРЕВЕСТИ")
+        self.ui.progressBar.setVisible(False)

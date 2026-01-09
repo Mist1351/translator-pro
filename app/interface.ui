@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>MainWindow</class>
- <widget class="QMainWindow" name="MainWindow">
+ <widget class="QWidget" name="MainWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -14,187 +14,196 @@
    <string>PyQt Pro Translator</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">
-    QMainWindow {
-      background-color: #2b2b2b;
-    }
-    QLabel {
-      color: #ffffff;
-      font-size: 14px;
-      font-weight: bold;
-    }
-    QTextEdit {
-      background-color: #353535;
-      color: #ffffff;
-      border: 1px solid #555;
-      border-radius: 8px;
-      padding: 10px;
-      font-size: 14px;
-    }
-    QTextEdit:focus {
-      border: 1px solid #3a86ff;
-    }
-    QComboBox {
-      background-color: #404040;
-      color: white;
-      border: 1px solid #555;
-      border-radius: 5px;
-      padding: 5px;
-      min-width: 150px;
-    }
-    QComboBox QAbstractItemView {
-      background-color: #404040;
-      color: white;
-      selection-background-color: #3a86ff;
-    }
-    QPushButton {
-      background-color: #3a86ff;
-      color: white;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: bold;
-    }
-    QPushButton:hover {
-      background-color: #266dd3;
-    }
-    QPushButton:pressed {
-      background-color: #1b4b91;
-    }
-    QPushButton:disabled {
-      background-color: #555555;
-      color: #aaaaaa;
-    }
-    QStatusBar {
-      color: #aaaaaa;
-    }
-    QMessageBox {
-      background-color: #2b2b2b;
-    }
-    QMessageBox QLabel {
-      color: white;
-    }
-    QMessageBox QPushButton {
-      background-color: #404040;
-      color: white;
-      padding: 5px 15px;
-    }
-    QProgressBar {
-      border: 1px solid #555;
-      border-radius: 5px;
-      text-align: center;
-      color: #333333;
-    }
-    QProgressBar::chunk {
-      background-color: #2ecc71;
-    }
-   </string>
+   <string notr="true">QWidget {
+  background-color: #2b2b2b;
+}
+QLabel {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: bold;
+}
+QTextEdit {
+  background-color: #353535;
+  color: #ffffff;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+}
+QTextEdit:focus {
+  border: 1px solid #3a86ff;
+}
+QComboBox {
+  background-color: #404040;
+  color: white;
+  border: 1px solid #555;
+  border-radius: 5px;
+  padding: 5px;
+  min-width: 150px;
+}
+QComboBox QAbstractItemView {
+  background-color: #404040;
+  color: white;
+  selection-background-color: #3a86ff;
+}
+QPushButton {
+  background-color: #3a86ff;
+  color: white;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+}
+QPushButton:hover {
+  background-color: #266dd3;
+}
+QPushButton:pressed {
+  background-color: #1b4b91;
+}
+QPushButton:disabled {
+  background-color: #555555;
+  color: #aaaaaa;
+}
+QStatusBar {
+  color: #aaaaaa;
+}
+QMessageBox {
+  background-color: #2b2b2b;
+}
+QMessageBox QLabel {
+  color: white;
+}
+QMessageBox QPushButton {
+  background-color: #404040;
+  color: white;
+  padding: 5px 15px;
+}
+QProgressBar {
+  border: 1px solid #555;
+  border-radius: 5px;
+  text-align: center;
+  color: #CCCCCC;
+}
+QProgressBar::chunk {
+  background-color: #2ecc71;
+}   </string>
   </property>
-  <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout">
-    <property name="spacing">
-     <number>15</number>
-    </property>
-    <property name="leftMargin">
-     <number>20</number>
-    </property>
-    <property name="topMargin">
-     <number>20</number>
-    </property>
-    <property name="rightMargin">
-     <number>20</number>
-    </property>
-    <property name="bottomMargin">
-     <number>20</number>
-    </property>
-    <item>
-     <layout class="QHBoxLayout" name="settingsLayout">
-      <item>
-       <widget class="QComboBox" name="comboMode">
-       </widget>
-      </item>
-      <item>
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QComboBox" name="comboSource"/>
-      </item>
-      <item>
-       <widget class="QLabel" name="labelArrow">
-        <property name="text">
-         <string>→</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QComboBox" name="comboTarget"/>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="textLayout">
-      <item>
-       <widget class="QTextEdit" name="TextInput">
-        <property name="placeholderText">
-         <string>Введите текст здесь...</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QTextEdit" name="TextOutput">
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-        <property name="placeholderText">
-         <string>Перевод появится здесь...</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <widget class="QPushButton" name="btnTranslate">
-      <property name="text">
-       <string>ПЕРЕВЕСТИ</string>
-      </property>
-      <property name="cursor">
-       <cursorShape>PointingHandCursor</cursorShape>
-      </property>
-      <property name="minimumHeight">
-       <number>50</number>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QStatusBar" name="statusbar"/>
-   <widget class="QProgressBar" name="progressBar">
-    <property name="maximumSize">
-     <size>
-      <width>200</width>
-      <height>16777215</height>
-     </size>
-    </property>
-    <property name="value">
-     <number>0</number>
-    </property>
-    <property name="visible">
-     <bool>false</bool>
-    </property>
-   </widget>
-  </widget>
+  <layout class="QVBoxLayout" name="verticalLayout_2">
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="spacing">
+      <number>15</number>
+     </property>
+     <property name="leftMargin">
+      <number>20</number>
+     </property>
+     <property name="topMargin">
+      <number>20</number>
+     </property>
+     <property name="rightMargin">
+      <number>20</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <layout class="QHBoxLayout" name="settingsLayout">
+       <item>
+        <widget class="QComboBox" name="comboMode"/>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QComboBox" name="comboSource"/>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelArrow">
+         <property name="text">
+          <string>→</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="comboTarget"/>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="textLayout">
+       <item>
+        <widget class="QTextEdit" name="textInput">
+         <property name="placeholderText">
+          <string>Введите текст здесь...</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTextEdit" name="textOutput">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+         <property name="placeholderText">
+          <string>Перевод появится здесь...</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnTranslate">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="cursor">
+        <cursorShape>PointingHandCursor</cursorShape>
+       </property>
+       <property name="text">
+        <string>ПЕРЕВЕСТИ</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QProgressBar" name="progressBar">
+       <property name="maximumSize">
+        <size>
+         <width>200</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="visible">
+        <bool>true</bool>
+       </property>
+       <property name="value">
+        <number>0</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
  <resources/>
  <connections/>
 </ui>

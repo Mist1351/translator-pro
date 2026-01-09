@@ -1,6 +1,6 @@
 # Библиотека для выполнения HTTP-запросов (нужна для скачивания моделей)
 # Импортируем базовые классы для многопоточности в Qt
-from PyQt6.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 
 
 class TranslatorWorker(QThread):
@@ -14,11 +14,11 @@ class TranslatorWorker(QThread):
     """
 
     # Сигналы (Signals) — это способ связи фонового потока с главным окном.
-    finished = pyqtSignal(str)  # Отправляет готовый текст перевода
-    error = pyqtSignal(str)  # Отправляет текст ошибки, если она случилась
-    status = pyqtSignal(str)  # Отправляет статус (например, "Скачивание...")
-    progress_val = pyqtSignal(int)  # Отправляет процент загрузки (0-100)
-    progress_visible = pyqtSignal(bool)  # Говорит, нужно ли показывать полосу загрузки
+    finished = Signal(str)  # Отправляет готовый текст перевода
+    error = Signal(str)  # Отправляет текст ошибки, если она случилась
+    status = Signal(str)  # Отправляет статус (например, "Скачивание...")
+    progress_val = Signal(int)  # Отправляет процент загрузки (0-100)
+    progress_visible = Signal(bool)  # Говорит, нужно ли показывать полосу загрузки
 
     def __init__(
         self,
