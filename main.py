@@ -2,7 +2,7 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
-from app import TranslatorApp
+from translator_app import TranslatorApp
 
 if __name__ == "__main__":
     try:

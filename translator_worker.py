@@ -1,6 +1,11 @@
-# Библиотека для выполнения HTTP-запросов (нужна для скачивания моделей)
-# Импортируем базовые классы для многопоточности в Qt
 from PySide6.QtCore import QThread, Signal
+
+try:
+    from deep_translator import GoogleTranslator
+except ImportError:
+    raise ImportError(
+        "Ошибка: Не установлены библиотеки! Выполните:\npip install pyside6 deep-translator"
+    )
 
 
 class TranslatorWorker(QThread):
@@ -35,7 +40,14 @@ class TranslatorWorker(QThread):
         self.target = target_lang
 
     def _translate(self) -> str:
-        return ""
+        """
+        Перевод online, с использованием GoogleTranslator.
+        """
+        self.status.emit("Онлайн перевод...")
+
+        # Используем deep_translator для запроса к Google API
+        translator = GoogleTranslator(source=self.src, target=self.target)
+        return translator.translate(self.text)
 
     def run(self) -> None:
         """

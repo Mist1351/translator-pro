@@ -103,13 +103,10 @@ QProgressBar::chunk {
       <number>20</number>
      </property>
      <property name="bottomMargin">
-      <number>0</number>
+      <number>20</number>
      </property>
      <item>
       <layout class="QHBoxLayout" name="settingsLayout">
-       <item>
-        <widget class="QComboBox" name="comboMode"/>
-       </item>
        <item>
         <spacer name="horizontalSpacer">
          <property name="orientation">
@@ -138,6 +135,19 @@ QProgressBar::chunk {
        </item>
        <item>
         <widget class="QComboBox" name="comboTarget"/>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </item>
@@ -181,22 +191,6 @@ QProgressBar::chunk {
        </property>
        <property name="text">
         <string>ПЕРЕВЕСТИ</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QProgressBar" name="progressBar">
-       <property name="maximumSize">
-        <size>
-         <width>200</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="visible">
-        <bool>true</bool>
-       </property>
-       <property name="value">
-        <number>0</number>
        </property>
       </widget>
      </item>

@@ -54,8 +54,8 @@ clean:
 build: setup
 	@echo [INFO] Building EXE...
 	$(VENV_PIP) install pyinstaller
-	pyinstaller --noconsole --onefile --name="TranslatorPro" --add-data=app/interface.ui:. main.py
+	pyinstaller --noconsole --onefile --name="TranslatorPro" --add-data=interface.ui:. main.py
 	@echo [SUCCESS] Executable is in dist/ folder.
 
 editor:
-	pyside6-designer app/interface.ui
+	pyside6-designer interface.ui
