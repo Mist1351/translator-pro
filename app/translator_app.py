@@ -99,7 +99,7 @@ class TranslatorApp(QMainWindow):
             self.setStyleSheet(styles)
             self.ui.setStyleSheet("")
 
-            # 5. Делаем загруженный виджет центральным (если это Main Window)
+            # 4. Делаем загруженный виджет центральным (если это Main Window)
             self.setCentralWidget(self.ui)
         else:
             raise FileExistsError(f"Interface file not found at: {ui_path}")
@@ -160,6 +160,9 @@ class TranslatorApp(QMainWindow):
         from_combo_box: QComboBox,
         to_combo_box: QComboBox,
     ) -> None:
+        """
+        Разрешение одинаковых имён в обоих комбобоксах.
+        """
         from_code: str = from_combo_box.currentData()
         to_code: str = to_combo_box.currentData()
         translator: Translator = self.get_current_translator()
