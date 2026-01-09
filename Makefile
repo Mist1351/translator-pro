@@ -37,7 +37,8 @@ activate:
 
 freeze:
 	@echo [INFO] Freeze requirements...
-	$(VENV_PIP) freeze > requirements.txt
+	echo --extra-index-url https://download.pytorch.org/whl/cpu > requirements.txt
+	$(VENV_PIP) freeze >> requirements.txt
 
 install:
 	@echo [INFO] Installing requirements...
