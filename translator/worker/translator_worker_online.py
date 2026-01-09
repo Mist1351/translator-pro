@@ -4,7 +4,7 @@ try:
     from deep_translator import GoogleTranslator
 except ImportError:
     raise ImportError(
-        "Ошибка: Не установлены библиотеки! Выполните:\npip install PyQt6 deep-translator"
+        "Ошибка: Не установлены библиотеки! Выполните:\npip install pyside6 deep-translator"
     )
 
 

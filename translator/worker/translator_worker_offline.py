@@ -43,7 +43,7 @@ try:
     from argostranslate.package import AvailablePackage, Package
 except ImportError:
     raise ImportError(
-        "Ошибка: Не установлены библиотеки! Выполните:\npip install torch --index-url https://download.pytorch.org/whl/cpu\npip install PyQt6 requests argostranslate"
+        "Ошибка: Не установлены библиотеки! Выполните:\npip install torch --index-url https://download.pytorch.org/whl/cpu\npip install pyside6 requests argostranslate"
     )
 
 
@@ -114,7 +114,14 @@ class TranslatorWorkerOffline(TranslatorWorker):
         # --- РУЧНОЕ СКАЧИВАНИЕ (ЧТОБЫ БЫЛ ПРОГРЕСС-БАР) ---
         try:
             # stream=True позволяет качать файл кусками
-            response: requests.Response = requests.get(download_url, stream=True)
+            # timeout=(5, 10) означает:
+            # 5 секунд ждем установки соединения
+            # 10 секунд ждем каждый новый кусок данных (chunk) внутри цикла
+            response: requests.Response = requests.get(
+                download_url,
+                stream=True,
+                timeout=(5, 10),
+            )
             total_content_length: str | None = response.headers.get("content-length")
 
             if total_content_length is None:
@@ -135,9 +142,19 @@ class TranslatorWorkerOffline(TranslatorWorker):
 
             self.status.emit("Распаковка и установка...")
             self.progress_visible.emit(False)
+            self.progress_val.emit(0)
 
             # Устанавливаем скачанный файл (он распакуется в DATA_DIR)
             argostranslate.package.install_from_path(filename)
+
+        except requests.exceptions.ReadTimeout:
+            raise Exception(
+                "Ошибка: Время ожидания скачивания истекло (медленный интернет или сбой сервера)."
+            )
+        except requests.exceptions.ConnectionError:
+            raise Exception("Ошибка: Нет соединения с интернетом.")
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Ошибка скачивания: {e}")
 
         finally:
             # Обязательно удаляем мусор (временный файл) за собой
