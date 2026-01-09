@@ -2,10 +2,14 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from translator_app import TranslatorApp
+from app import TranslatorApp
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = TranslatorApp()
-    window.show()
-    sys.exit(app.exec())
+    try:
+        app = QApplication(sys.argv)
+        window = TranslatorApp()
+        window.show()
+        sys.exit(app.exec())
+    except Exception as e:
+        print(e)
+        sys.exit(1)
