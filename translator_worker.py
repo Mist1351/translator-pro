@@ -15,8 +15,11 @@ from PyQt6.QtCore import QThread, pyqtSignal
 # Мы должны настроить пути ДО импорта библиотеки argostranslate,
 # потому что она считывает переменные окружения в момент инициализации.
 
-# 1. Получаем абсолютный путь к папке, где лежит этот скрипт
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 1. Получаем абсолютный путь к папке, где лежит этот скрипт или EXE
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # 2. Формируем путь к папке "translation_data" рядом со скриптом.
 # Именно здесь будут храниться гигабайты нейросетевых моделей.

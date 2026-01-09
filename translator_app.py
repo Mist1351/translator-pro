@@ -17,6 +17,27 @@ from PyQt6.QtWidgets import (
 from translator_worker import TranslationWorker
 
 
+# === ЛОГИКА ПУТЕЙ ===
+def get_base_path():
+    """Возвращает путь к папке, где лежит EXE (или скрипт python)"""
+    if getattr(sys, "frozen", False):
+        # Если запущено как EXE
+        return os.path.dirname(sys.executable)
+    else:
+        # Если запущено как скрипт
+        return os.path.dirname(os.path.abspath(__file__))
+
+
+def get_resource_path(relative_path):
+    """Возвращает путь к внутренним ресурсам (interface.ui)"""
+    if getattr(sys, "frozen", False):
+        # В EXE ресурсы лежат во временной папке sys._MEIPASS
+        base_path = sys._MEIPASS  # type: ignore
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)
+
+
 class TranslatorApp(QMainWindow):
     """
     Главный класс приложения-переводчика.
@@ -40,12 +61,15 @@ class TranslatorApp(QMainWindow):
         """
         super().__init__()
 
+        # Ищем interface.ui через get_resource_path
+        ui_path = get_resource_path("interface.ui")
+
         # Проверяем наличие файла разметки перед загрузкой
-        if os.path.exists("interface.ui"):
+        if os.path.exists(ui_path):
             # Динамически загружаем интерфейс из .ui файла
-            uic.load_ui.loadUi("interface.ui", self)
+            uic.load_ui.loadUi(ui_path, self)
         else:
-            sys.exit("Interface file not found!")
+            sys.exit(f"Interface file not found at: {ui_path}")
 
         # Словарь поддерживаемых языков: Название -> Код ISO
         self.languages: dict[str, str] = {
