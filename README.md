@@ -50,3 +50,7 @@ pyinstaller --noconsole --onefile --name="TranslatorPro" --add-data=app/interfac
 ```bash
 python3 main.py
 ```
+
+## Запуск
+
+Скачайте [translation_data.zip](https://github.com/Mist1351/translator-pro/releases/download/data/translation_data.zip) и распакуйте содержимое рядом с `TranslatorPro.exe` или в корне проекта, если запускать `main.py`.
