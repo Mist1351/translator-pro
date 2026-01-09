@@ -19,11 +19,13 @@ from .translator_worker import TranslatorWorker
 if getattr(sys, "frozen", False):
     BASE_DIR: str = os.path.dirname(sys.executable)
 else:
-    BASE_DIR: str = os.path.dirname(os.path.abspath(__file__))
+    BASE_DIR: str = Path(
+        os.path.dirname(os.path.abspath(__file__))
+    ).parent.parent.as_posix()
 
 # 2. Формируем путь к папке "translation_data" рядом со скриптом.
 # Именно здесь будут храниться гигабайты нейросетевых моделей.
-DATA_DIR: str = os.path.join(Path(BASE_DIR).parent.parent, "translation_data")
+DATA_DIR: str = os.path.join(BASE_DIR, "translation_data")
 
 # 3. Если папки нет — создаем её.
 if not os.path.exists(DATA_DIR):
