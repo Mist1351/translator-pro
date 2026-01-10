@@ -50,3 +50,17 @@ pyinstaller --noconsole --onefile --name="TranslatorPro" --add-data=app/interfac
 ```bash
 python3 main.py
 ```
+
+## Редактирование UI
+
+### Makefile
+
+```bash
+make editor
+```
+
+### Вручную
+
+```bash
+pyside6-designer interface.ui
+```
