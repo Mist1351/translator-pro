@@ -51,6 +51,20 @@ pyinstaller --noconsole --onefile --name="TranslatorPro" --add-data=app/interfac
 python3 main.py
 ```
 
+## Редактирование UI
+
+### Makefile
+
+```bash
+make editor
+```
+
+### Вручную
+
+```bash
+pyside6-designer app/interface.ui
+```
+
 ## Запуск
 
 Скачайте [translation_data.zip](https://github.com/Mist1351/translator-pro/releases/download/data/translation_data.zip) и распакуйте содержимое рядом с `TranslatorPro.exe` или в корне проекта, если запускать `main.py`.
