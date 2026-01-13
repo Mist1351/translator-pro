@@ -40,7 +40,7 @@ pip install -r requirements.txt
 
 ```bash
 pip install pyinstaller
-pyinstaller --noconsole --onefile --name="TranslatorPro" --add-data=app/interface.ui:. main.py
+pyinstaller --noconsole --onefile --name="TranslatorPro" --add-data=interface.ui:. main.py
 ```
 
 `TranslatorPro.exe` окажется в папке `dist/`.
