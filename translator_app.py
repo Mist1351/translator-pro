@@ -16,6 +16,8 @@ from PySide6.QtWidgets import (
 from translator import Translator
 from translator_worker import TranslatorWorker
 
+from random_fact import get_random_fact
+
 
 def get_resource_path(relative_path: str) -> str:
     """
@@ -36,6 +38,7 @@ class InterfaceUI(QWidget):
     comboSource: QComboBox
     comboTarget: QComboBox
     btnTranslate: QPushButton
+    btnFact: QPushButton
 
 
 class TranslatorApp(QMainWindow):
@@ -125,6 +128,7 @@ class TranslatorApp(QMainWindow):
         Подключение сигналов к слотам (обработчикам событий).
         """
         self.ui.btnTranslate.clicked.connect(self.start_translation)
+        self.ui.btnFact.clicked.connect(self.random_fact)
         # Подключаем сигналы изменения индекса в комбобоксах
         self.ui.comboSource.currentIndexChanged.connect(self.on_source_changed)
         self.ui.comboTarget.currentIndexChanged.connect(self.on_target_changed)
@@ -229,6 +233,17 @@ class TranslatorApp(QMainWindow):
 
         # Запускаем поток
         self.worker.start()
+
+    def random_fact(self):
+        """
+        Показать всплывающее окно (Popup) с фактом
+        """
+        fact = get_random_fact() or 'В файле "facts.txt" не найдено ни одного факта'
+        msg = QMessageBox()
+        msg.setWindowTitle("Интересный факт")
+        msg.setText(fact)
+        msg.setIcon(QMessageBox.Icon.Information)
+        msg.exec()
 
     def on_finished(self, result):
         """
