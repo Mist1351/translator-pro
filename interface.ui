@@ -210,7 +210,8 @@ QProgressBar::chunk {
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>&lt;Подпись&gt;</string>
+        <string>Косман Эвелина Ивановна
+Швалева Маша Антоновна</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
